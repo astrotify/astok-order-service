@@ -17,3 +17,13 @@ deps:
 	go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
 	go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
 	@echo "✅ Dependencies installed!"
+
+# Generate Go code from SQL queries
+sqlc:
+	@echo "Generating Go code from SQL queries..."
+	@if ! command -v sqlc > /dev/null; then \
+		echo "Installing sqlc..."; \
+		go install github.com/sqlc-dev/sqlc/cmd/sqlc@latest; \
+	fi
+	sqlc generate
+	@echo "✅ SQL code generated!"
