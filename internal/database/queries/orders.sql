@@ -10,7 +10,12 @@ WHERE id = $1 LIMIT 1;
 -- name: GetOrdersByUserID :many
 SELECT * FROM orders
 WHERE user_id = $1
-ORDER BY created_at DESC;
+ORDER BY created_at DESC
+LIMIT $2 OFFSET $3;
+
+-- name: GetOrdersByUserIDCount :one
+SELECT COUNT(*) FROM orders
+WHERE user_id = $1;
 
 -- name: UpdateOrderStatus :one
 UPDATE orders

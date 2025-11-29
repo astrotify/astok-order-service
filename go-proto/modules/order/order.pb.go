@@ -4,12 +4,12 @@
 // 	protoc        v6.33.1
 // source: modules/order.proto
 
-package modules_order
+package order
 
 import (
+	common "order-service/go-proto/modules/common"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
-	modules_common "order-service/go-proto/proto/modules.common"
 	reflect "reflect"
 	sync "sync"
 	unsafe "unsafe"
@@ -26,6 +26,7 @@ type Order struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Id            int32                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
 	UserId        int32                  `protobuf:"varint,2,opt,name=userId,proto3" json:"userId,omitempty"`
+	TotalAmount   float64                `protobuf:"fixed64,3,opt,name=totalAmount,proto3" json:"totalAmount,omitempty"`
 	Products      []*OrderProduct        `protobuf:"bytes,4,rep,name=products,proto3" json:"products,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -75,6 +76,13 @@ func (x *Order) GetUserId() int32 {
 	return 0
 }
 
+func (x *Order) GetTotalAmount() float64 {
+	if x != nil {
+		return x.TotalAmount
+	}
+	return 0
+}
+
 func (x *Order) GetProducts() []*OrderProduct {
 	if x != nil {
 		return x.Products
@@ -86,6 +94,7 @@ type OrderProduct struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Id            int32                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
 	Quantity      int32                  `protobuf:"varint,2,opt,name=quantity,proto3" json:"quantity,omitempty"`
+	Price         float64                `protobuf:"fixed64,3,opt,name=price,proto3" json:"price,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -134,10 +143,18 @@ func (x *OrderProduct) GetQuantity() int32 {
 	return 0
 }
 
+func (x *OrderProduct) GetPrice() float64 {
+	if x != nil {
+		return x.Price
+	}
+	return 0
+}
+
 type CreateOrderRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	UserId        int32                  `protobuf:"varint,1,opt,name=userId,proto3" json:"userId,omitempty"`
-	Products      []*OrderProduct        `protobuf:"bytes,2,rep,name=products,proto3" json:"products,omitempty"`
+	TotalAmount   float64                `protobuf:"fixed64,2,opt,name=totalAmount,proto3" json:"totalAmount,omitempty"`
+	Products      []*OrderProduct        `protobuf:"bytes,3,rep,name=products,proto3" json:"products,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -175,6 +192,13 @@ func (*CreateOrderRequest) Descriptor() ([]byte, []int) {
 func (x *CreateOrderRequest) GetUserId() int32 {
 	if x != nil {
 		return x.UserId
+	}
+	return 0
+}
+
+func (x *CreateOrderRequest) GetTotalAmount() float64 {
+	if x != nil {
+		return x.TotalAmount
 	}
 	return 0
 }
@@ -353,6 +377,8 @@ func (x *GetOrderResponse) GetMessage() string {
 type GetOrdersByUserRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	UserId        int32                  `protobuf:"varint,1,opt,name=userId,proto3" json:"userId,omitempty"`
+	Limit         int32                  `protobuf:"varint,2,opt,name=limit,proto3" json:"limit,omitempty"`
+	Page          int32                  `protobuf:"varint,3,opt,name=page,proto3" json:"page,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -394,12 +420,26 @@ func (x *GetOrdersByUserRequest) GetUserId() int32 {
 	return 0
 }
 
+func (x *GetOrdersByUserRequest) GetLimit() int32 {
+	if x != nil {
+		return x.Limit
+	}
+	return 0
+}
+
+func (x *GetOrdersByUserRequest) GetPage() int32 {
+	if x != nil {
+		return x.Page
+	}
+	return 0
+}
+
 type GetOrdersByUserResponse struct {
-	state         protoimpl.MessageState     `protogen:"open.v1"`
-	Orders        []*Order                   `protobuf:"bytes,1,rep,name=orders,proto3" json:"orders,omitempty"`
-	Pagination    *modules_common.Pagination `protobuf:"bytes,2,opt,name=pagination,proto3" json:"pagination,omitempty"`
-	Success       bool                       `protobuf:"varint,5,opt,name=success,proto3" json:"success,omitempty"`
-	Message       string                     `protobuf:"bytes,6,opt,name=message,proto3" json:"message,omitempty"`
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Orders        []*Order               `protobuf:"bytes,1,rep,name=orders,proto3" json:"orders,omitempty"`
+	Pagination    *common.Pagination     `protobuf:"bytes,2,opt,name=pagination,proto3" json:"pagination,omitempty"`
+	Success       bool                   `protobuf:"varint,5,opt,name=success,proto3" json:"success,omitempty"`
+	Message       string                 `protobuf:"bytes,6,opt,name=message,proto3" json:"message,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -441,7 +481,7 @@ func (x *GetOrdersByUserResponse) GetOrders() []*Order {
 	return nil
 }
 
-func (x *GetOrdersByUserResponse) GetPagination() *modules_common.Pagination {
+func (x *GetOrdersByUserResponse) GetPagination() *common.Pagination {
 	if x != nil {
 		return x.Pagination
 	}
@@ -466,36 +506,41 @@ var File_modules_order_proto protoreflect.FileDescriptor
 
 const file_modules_order_proto_rawDesc = "" +
 	"\n" +
-	"\x13modules/order.proto\x12\rmodules.order\x1a\x14modules/common.proto\"h\n" +
+	"\x13modules/order.proto\x12\x05order\x1a\x14modules/common.proto\"\x82\x01\n" +
 	"\x05Order\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\x05R\x02id\x12\x16\n" +
-	"\x06userId\x18\x02 \x01(\x05R\x06userId\x127\n" +
-	"\bproducts\x18\x04 \x03(\v2\x1b.modules.order.OrderProductR\bproducts\":\n" +
+	"\x06userId\x18\x02 \x01(\x05R\x06userId\x12 \n" +
+	"\vtotalAmount\x18\x03 \x01(\x01R\vtotalAmount\x12/\n" +
+	"\bproducts\x18\x04 \x03(\v2\x13.order.OrderProductR\bproducts\"P\n" +
 	"\fOrderProduct\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\x05R\x02id\x12\x1a\n" +
-	"\bquantity\x18\x02 \x01(\x05R\bquantity\"e\n" +
+	"\bquantity\x18\x02 \x01(\x05R\bquantity\x12\x14\n" +
+	"\x05price\x18\x03 \x01(\x01R\x05price\"\x7f\n" +
 	"\x12CreateOrderRequest\x12\x16\n" +
-	"\x06userId\x18\x01 \x01(\x05R\x06userId\x127\n" +
-	"\bproducts\x18\x02 \x03(\v2\x1b.modules.order.OrderProductR\bproducts\"u\n" +
-	"\x13CreateOrderResponse\x12*\n" +
-	"\x05order\x18\x01 \x01(\v2\x14.modules.order.OrderR\x05order\x12\x18\n" +
+	"\x06userId\x18\x01 \x01(\x05R\x06userId\x12 \n" +
+	"\vtotalAmount\x18\x02 \x01(\x01R\vtotalAmount\x12/\n" +
+	"\bproducts\x18\x03 \x03(\v2\x13.order.OrderProductR\bproducts\"m\n" +
+	"\x13CreateOrderResponse\x12\"\n" +
+	"\x05order\x18\x01 \x01(\v2\f.order.OrderR\x05order\x12\x18\n" +
 	"\amessage\x18\x02 \x01(\tR\amessage\x12\x18\n" +
 	"\asuccess\x18\x03 \x01(\bR\asuccess\"!\n" +
 	"\x0fGetOrderRequest\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\x05R\x02id\"r\n" +
-	"\x10GetOrderResponse\x12*\n" +
-	"\x05order\x18\x01 \x01(\v2\x14.modules.order.OrderR\x05order\x12\x18\n" +
+	"\x02id\x18\x01 \x01(\x05R\x02id\"j\n" +
+	"\x10GetOrderResponse\x12\"\n" +
+	"\x05order\x18\x01 \x01(\v2\f.order.OrderR\x05order\x12\x18\n" +
 	"\asuccess\x18\x02 \x01(\bR\asuccess\x12\x18\n" +
-	"\amessage\x18\x03 \x01(\tR\amessage\"0\n" +
+	"\amessage\x18\x03 \x01(\tR\amessage\"Z\n" +
 	"\x16GetOrdersByUserRequest\x12\x16\n" +
-	"\x06userId\x18\x01 \x01(\x05R\x06userId\"\xb7\x01\n" +
-	"\x17GetOrdersByUserResponse\x12,\n" +
-	"\x06orders\x18\x01 \x03(\v2\x14.modules.order.OrderR\x06orders\x12:\n" +
+	"\x06userId\x18\x01 \x01(\x05R\x06userId\x12\x14\n" +
+	"\x05limit\x18\x02 \x01(\x05R\x05limit\x12\x12\n" +
+	"\x04page\x18\x03 \x01(\x05R\x04page\"\xa7\x01\n" +
+	"\x17GetOrdersByUserResponse\x12$\n" +
+	"\x06orders\x18\x01 \x03(\v2\f.order.OrderR\x06orders\x122\n" +
 	"\n" +
-	"pagination\x18\x02 \x01(\v2\x1a.modules.common.PaginationR\n" +
+	"pagination\x18\x02 \x01(\v2\x12.common.PaginationR\n" +
 	"pagination\x12\x18\n" +
 	"\asuccess\x18\x05 \x01(\bR\asuccess\x12\x18\n" +
-	"\amessage\x18\x06 \x01(\tR\amessageB,Z*order-service/go-proto/proto/modules.orderb\x06proto3"
+	"\amessage\x18\x06 \x01(\tR\amessageB\x18Z\x16go-proto/modules/orderb\x06proto3"
 
 var (
 	file_modules_order_proto_rawDescOnce sync.Once
@@ -511,23 +556,23 @@ func file_modules_order_proto_rawDescGZIP() []byte {
 
 var file_modules_order_proto_msgTypes = make([]protoimpl.MessageInfo, 8)
 var file_modules_order_proto_goTypes = []any{
-	(*Order)(nil),                     // 0: modules.order.Order
-	(*OrderProduct)(nil),              // 1: modules.order.OrderProduct
-	(*CreateOrderRequest)(nil),        // 2: modules.order.CreateOrderRequest
-	(*CreateOrderResponse)(nil),       // 3: modules.order.CreateOrderResponse
-	(*GetOrderRequest)(nil),           // 4: modules.order.GetOrderRequest
-	(*GetOrderResponse)(nil),          // 5: modules.order.GetOrderResponse
-	(*GetOrdersByUserRequest)(nil),    // 6: modules.order.GetOrdersByUserRequest
-	(*GetOrdersByUserResponse)(nil),   // 7: modules.order.GetOrdersByUserResponse
-	(*modules_common.Pagination)(nil), // 8: modules.common.Pagination
+	(*Order)(nil),                   // 0: order.Order
+	(*OrderProduct)(nil),            // 1: order.OrderProduct
+	(*CreateOrderRequest)(nil),      // 2: order.CreateOrderRequest
+	(*CreateOrderResponse)(nil),     // 3: order.CreateOrderResponse
+	(*GetOrderRequest)(nil),         // 4: order.GetOrderRequest
+	(*GetOrderResponse)(nil),        // 5: order.GetOrderResponse
+	(*GetOrdersByUserRequest)(nil),  // 6: order.GetOrdersByUserRequest
+	(*GetOrdersByUserResponse)(nil), // 7: order.GetOrdersByUserResponse
+	(*common.Pagination)(nil),       // 8: common.Pagination
 }
 var file_modules_order_proto_depIdxs = []int32{
-	1, // 0: modules.order.Order.products:type_name -> modules.order.OrderProduct
-	1, // 1: modules.order.CreateOrderRequest.products:type_name -> modules.order.OrderProduct
-	0, // 2: modules.order.CreateOrderResponse.order:type_name -> modules.order.Order
-	0, // 3: modules.order.GetOrderResponse.order:type_name -> modules.order.Order
-	0, // 4: modules.order.GetOrdersByUserResponse.orders:type_name -> modules.order.Order
-	8, // 5: modules.order.GetOrdersByUserResponse.pagination:type_name -> modules.common.Pagination
+	1, // 0: order.Order.products:type_name -> order.OrderProduct
+	1, // 1: order.CreateOrderRequest.products:type_name -> order.OrderProduct
+	0, // 2: order.CreateOrderResponse.order:type_name -> order.Order
+	0, // 3: order.GetOrderResponse.order:type_name -> order.Order
+	0, // 4: order.GetOrdersByUserResponse.orders:type_name -> order.Order
+	8, // 5: order.GetOrdersByUserResponse.pagination:type_name -> common.Pagination
 	6, // [6:6] is the sub-list for method output_type
 	6, // [6:6] is the sub-list for method input_type
 	6, // [6:6] is the sub-list for extension type_name

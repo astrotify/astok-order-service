@@ -48,7 +48,7 @@ func Load() (*Config, error) {
 		config.DBPassword = getEnv("DB_PASSWORD", "postgres")
 		config.DBName = getEnv("DB_NAME", "orderdb")
 		config.DatabaseURL = fmt.Sprintf(
-			"postgres://%s:%s@%s:%d/%s?sslmode=disable",
+			"postgres://%s:%s@%s:%d/%s?sslmode=disable&timezone=UTC",
 			config.DBUser, config.DBPassword, config.DBHost, config.DBPort, config.DBName,
 		)
 	}

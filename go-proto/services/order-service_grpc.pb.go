@@ -4,14 +4,14 @@
 // - protoc             v6.33.1
 // source: services/order-service.proto
 
-package services_order
+package services
 
 import (
 	context "context"
+	order "order-service/go-proto/modules/order"
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
 	status "google.golang.org/grpc/status"
-	modules_order "order-service/go-proto/proto/modules.order"
 )
 
 // This is a compile-time assertion to ensure that this generated file
@@ -20,18 +20,18 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	OrderGRPCService_CreateOrder_FullMethodName     = "/services.order.OrderGRPCService/createOrder"
-	OrderGRPCService_GetOrder_FullMethodName        = "/services.order.OrderGRPCService/getOrder"
-	OrderGRPCService_GetOrdersByUser_FullMethodName = "/services.order.OrderGRPCService/getOrdersByUser"
+	OrderGRPCService_CreateOrder_FullMethodName     = "/services.OrderGRPCService/createOrder"
+	OrderGRPCService_GetOrder_FullMethodName        = "/services.OrderGRPCService/getOrder"
+	OrderGRPCService_GetOrdersByUser_FullMethodName = "/services.OrderGRPCService/getOrdersByUser"
 )
 
 // OrderGRPCServiceClient is the client API for OrderGRPCService service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type OrderGRPCServiceClient interface {
-	CreateOrder(ctx context.Context, in *modules_order.CreateOrderRequest, opts ...grpc.CallOption) (*modules_order.CreateOrderResponse, error)
-	GetOrder(ctx context.Context, in *modules_order.GetOrderRequest, opts ...grpc.CallOption) (*modules_order.GetOrderResponse, error)
-	GetOrdersByUser(ctx context.Context, in *modules_order.GetOrdersByUserRequest, opts ...grpc.CallOption) (*modules_order.GetOrdersByUserResponse, error)
+	CreateOrder(ctx context.Context, in *order.CreateOrderRequest, opts ...grpc.CallOption) (*order.CreateOrderResponse, error)
+	GetOrder(ctx context.Context, in *order.GetOrderRequest, opts ...grpc.CallOption) (*order.GetOrderResponse, error)
+	GetOrdersByUser(ctx context.Context, in *order.GetOrdersByUserRequest, opts ...grpc.CallOption) (*order.GetOrdersByUserResponse, error)
 }
 
 type orderGRPCServiceClient struct {
@@ -42,9 +42,9 @@ func NewOrderGRPCServiceClient(cc grpc.ClientConnInterface) OrderGRPCServiceClie
 	return &orderGRPCServiceClient{cc}
 }
 
-func (c *orderGRPCServiceClient) CreateOrder(ctx context.Context, in *modules_order.CreateOrderRequest, opts ...grpc.CallOption) (*modules_order.CreateOrderResponse, error) {
+func (c *orderGRPCServiceClient) CreateOrder(ctx context.Context, in *order.CreateOrderRequest, opts ...grpc.CallOption) (*order.CreateOrderResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(modules_order.CreateOrderResponse)
+	out := new(order.CreateOrderResponse)
 	err := c.cc.Invoke(ctx, OrderGRPCService_CreateOrder_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -52,9 +52,9 @@ func (c *orderGRPCServiceClient) CreateOrder(ctx context.Context, in *modules_or
 	return out, nil
 }
 
-func (c *orderGRPCServiceClient) GetOrder(ctx context.Context, in *modules_order.GetOrderRequest, opts ...grpc.CallOption) (*modules_order.GetOrderResponse, error) {
+func (c *orderGRPCServiceClient) GetOrder(ctx context.Context, in *order.GetOrderRequest, opts ...grpc.CallOption) (*order.GetOrderResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(modules_order.GetOrderResponse)
+	out := new(order.GetOrderResponse)
 	err := c.cc.Invoke(ctx, OrderGRPCService_GetOrder_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -62,9 +62,9 @@ func (c *orderGRPCServiceClient) GetOrder(ctx context.Context, in *modules_order
 	return out, nil
 }
 
-func (c *orderGRPCServiceClient) GetOrdersByUser(ctx context.Context, in *modules_order.GetOrdersByUserRequest, opts ...grpc.CallOption) (*modules_order.GetOrdersByUserResponse, error) {
+func (c *orderGRPCServiceClient) GetOrdersByUser(ctx context.Context, in *order.GetOrdersByUserRequest, opts ...grpc.CallOption) (*order.GetOrdersByUserResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(modules_order.GetOrdersByUserResponse)
+	out := new(order.GetOrdersByUserResponse)
 	err := c.cc.Invoke(ctx, OrderGRPCService_GetOrdersByUser_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -76,9 +76,9 @@ func (c *orderGRPCServiceClient) GetOrdersByUser(ctx context.Context, in *module
 // All implementations must embed UnimplementedOrderGRPCServiceServer
 // for forward compatibility.
 type OrderGRPCServiceServer interface {
-	CreateOrder(context.Context, *modules_order.CreateOrderRequest) (*modules_order.CreateOrderResponse, error)
-	GetOrder(context.Context, *modules_order.GetOrderRequest) (*modules_order.GetOrderResponse, error)
-	GetOrdersByUser(context.Context, *modules_order.GetOrdersByUserRequest) (*modules_order.GetOrdersByUserResponse, error)
+	CreateOrder(context.Context, *order.CreateOrderRequest) (*order.CreateOrderResponse, error)
+	GetOrder(context.Context, *order.GetOrderRequest) (*order.GetOrderResponse, error)
+	GetOrdersByUser(context.Context, *order.GetOrdersByUserRequest) (*order.GetOrdersByUserResponse, error)
 	mustEmbedUnimplementedOrderGRPCServiceServer()
 }
 
@@ -89,13 +89,13 @@ type OrderGRPCServiceServer interface {
 // pointer dereference when methods are called.
 type UnimplementedOrderGRPCServiceServer struct{}
 
-func (UnimplementedOrderGRPCServiceServer) CreateOrder(context.Context, *modules_order.CreateOrderRequest) (*modules_order.CreateOrderResponse, error) {
+func (UnimplementedOrderGRPCServiceServer) CreateOrder(context.Context, *order.CreateOrderRequest) (*order.CreateOrderResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method CreateOrder not implemented")
 }
-func (UnimplementedOrderGRPCServiceServer) GetOrder(context.Context, *modules_order.GetOrderRequest) (*modules_order.GetOrderResponse, error) {
+func (UnimplementedOrderGRPCServiceServer) GetOrder(context.Context, *order.GetOrderRequest) (*order.GetOrderResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetOrder not implemented")
 }
-func (UnimplementedOrderGRPCServiceServer) GetOrdersByUser(context.Context, *modules_order.GetOrdersByUserRequest) (*modules_order.GetOrdersByUserResponse, error) {
+func (UnimplementedOrderGRPCServiceServer) GetOrdersByUser(context.Context, *order.GetOrdersByUserRequest) (*order.GetOrdersByUserResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetOrdersByUser not implemented")
 }
 func (UnimplementedOrderGRPCServiceServer) mustEmbedUnimplementedOrderGRPCServiceServer() {}
@@ -120,7 +120,7 @@ func RegisterOrderGRPCServiceServer(s grpc.ServiceRegistrar, srv OrderGRPCServic
 }
 
 func _OrderGRPCService_CreateOrder_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(modules_order.CreateOrderRequest)
+	in := new(order.CreateOrderRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -132,13 +132,13 @@ func _OrderGRPCService_CreateOrder_Handler(srv interface{}, ctx context.Context,
 		FullMethod: OrderGRPCService_CreateOrder_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(OrderGRPCServiceServer).CreateOrder(ctx, req.(*modules_order.CreateOrderRequest))
+		return srv.(OrderGRPCServiceServer).CreateOrder(ctx, req.(*order.CreateOrderRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
 func _OrderGRPCService_GetOrder_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(modules_order.GetOrderRequest)
+	in := new(order.GetOrderRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -150,13 +150,13 @@ func _OrderGRPCService_GetOrder_Handler(srv interface{}, ctx context.Context, de
 		FullMethod: OrderGRPCService_GetOrder_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(OrderGRPCServiceServer).GetOrder(ctx, req.(*modules_order.GetOrderRequest))
+		return srv.(OrderGRPCServiceServer).GetOrder(ctx, req.(*order.GetOrderRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
 func _OrderGRPCService_GetOrdersByUser_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(modules_order.GetOrdersByUserRequest)
+	in := new(order.GetOrdersByUserRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -168,7 +168,7 @@ func _OrderGRPCService_GetOrdersByUser_Handler(srv interface{}, ctx context.Cont
 		FullMethod: OrderGRPCService_GetOrdersByUser_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(OrderGRPCServiceServer).GetOrdersByUser(ctx, req.(*modules_order.GetOrdersByUserRequest))
+		return srv.(OrderGRPCServiceServer).GetOrdersByUser(ctx, req.(*order.GetOrdersByUserRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -177,7 +177,7 @@ func _OrderGRPCService_GetOrdersByUser_Handler(srv interface{}, ctx context.Cont
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
 var OrderGRPCService_ServiceDesc = grpc.ServiceDesc{
-	ServiceName: "services.order.OrderGRPCService",
+	ServiceName: "services.OrderGRPCService",
 	HandlerType: (*OrderGRPCServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{

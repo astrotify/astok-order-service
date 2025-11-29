@@ -60,3 +60,7 @@ func (p *Producer) Emit(topic string, data interface{}) error {
 	log.Println("✅ Message produced to", topic)
 	return nil
 }
+
+func (p *Producer) Close() {
+	p.producer.Close()
+}

@@ -14,7 +14,8 @@ type Querier interface {
 	GetOrderByID(ctx context.Context, id int32) (Order, error)
 	GetOrderProductsByOrderID(ctx context.Context, orderID int32) ([]OrderProduct, error)
 	GetOrderWithProducts(ctx context.Context, id int32) (GetOrderWithProductsRow, error)
-	GetOrdersByUserID(ctx context.Context, userID int32) ([]Order, error)
+	GetOrdersByUserID(ctx context.Context, arg GetOrdersByUserIDParams) ([]Order, error)
+	GetOrdersByUserIDCount(ctx context.Context, userID int32) (int64, error)
 	UpdateOrderStatus(ctx context.Context, arg UpdateOrderStatusParams) (Order, error)
 }
 

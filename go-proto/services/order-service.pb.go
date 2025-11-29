@@ -4,12 +4,12 @@
 // 	protoc        v6.33.1
 // source: services/order-service.proto
 
-package services_order
+package services
 
 import (
+	order "order-service/go-proto/modules/order"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
-	modules_order "order-service/go-proto/proto/modules.order"
 	reflect "reflect"
 	unsafe "unsafe"
 )
@@ -25,27 +25,27 @@ var File_services_order_service_proto protoreflect.FileDescriptor
 
 const file_services_order_service_proto_rawDesc = "" +
 	"\n" +
-	"\x1cservices/order-service.proto\x12\x0eservices.order\x1a\x13modules/order.proto2\x97\x02\n" +
-	"\x10OrderGRPCService\x12T\n" +
-	"\vcreateOrder\x12!.modules.order.CreateOrderRequest\x1a\".modules.order.CreateOrderResponse\x12K\n" +
-	"\bgetOrder\x12\x1e.modules.order.GetOrderRequest\x1a\x1f.modules.order.GetOrderResponse\x12`\n" +
-	"\x0fgetOrdersByUser\x12%.modules.order.GetOrdersByUserRequest\x1a&.modules.order.GetOrdersByUserResponseB-Z+order-service/go-proto/proto/services.orderb\x06proto3"
+	"\x1cservices/order-service.proto\x12\bservices\x1a\x13modules/order.proto2\xe7\x01\n" +
+	"\x10OrderGRPCService\x12D\n" +
+	"\vcreateOrder\x12\x19.order.CreateOrderRequest\x1a\x1a.order.CreateOrderResponse\x12;\n" +
+	"\bgetOrder\x12\x16.order.GetOrderRequest\x1a\x17.order.GetOrderResponse\x12P\n" +
+	"\x0fgetOrdersByUser\x12\x1d.order.GetOrdersByUserRequest\x1a\x1e.order.GetOrdersByUserResponseB\x13Z\x11go-proto/servicesb\x06proto3"
 
 var file_services_order_service_proto_goTypes = []any{
-	(*modules_order.CreateOrderRequest)(nil),      // 0: modules.order.CreateOrderRequest
-	(*modules_order.GetOrderRequest)(nil),         // 1: modules.order.GetOrderRequest
-	(*modules_order.GetOrdersByUserRequest)(nil),  // 2: modules.order.GetOrdersByUserRequest
-	(*modules_order.CreateOrderResponse)(nil),     // 3: modules.order.CreateOrderResponse
-	(*modules_order.GetOrderResponse)(nil),        // 4: modules.order.GetOrderResponse
-	(*modules_order.GetOrdersByUserResponse)(nil), // 5: modules.order.GetOrdersByUserResponse
+	(*order.CreateOrderRequest)(nil),      // 0: order.CreateOrderRequest
+	(*order.GetOrderRequest)(nil),         // 1: order.GetOrderRequest
+	(*order.GetOrdersByUserRequest)(nil),  // 2: order.GetOrdersByUserRequest
+	(*order.CreateOrderResponse)(nil),     // 3: order.CreateOrderResponse
+	(*order.GetOrderResponse)(nil),        // 4: order.GetOrderResponse
+	(*order.GetOrdersByUserResponse)(nil), // 5: order.GetOrdersByUserResponse
 }
 var file_services_order_service_proto_depIdxs = []int32{
-	0, // 0: services.order.OrderGRPCService.createOrder:input_type -> modules.order.CreateOrderRequest
-	1, // 1: services.order.OrderGRPCService.getOrder:input_type -> modules.order.GetOrderRequest
-	2, // 2: services.order.OrderGRPCService.getOrdersByUser:input_type -> modules.order.GetOrdersByUserRequest
-	3, // 3: services.order.OrderGRPCService.createOrder:output_type -> modules.order.CreateOrderResponse
-	4, // 4: services.order.OrderGRPCService.getOrder:output_type -> modules.order.GetOrderResponse
-	5, // 5: services.order.OrderGRPCService.getOrdersByUser:output_type -> modules.order.GetOrdersByUserResponse
+	0, // 0: services.OrderGRPCService.createOrder:input_type -> order.CreateOrderRequest
+	1, // 1: services.OrderGRPCService.getOrder:input_type -> order.GetOrderRequest
+	2, // 2: services.OrderGRPCService.getOrdersByUser:input_type -> order.GetOrdersByUserRequest
+	3, // 3: services.OrderGRPCService.createOrder:output_type -> order.CreateOrderResponse
+	4, // 4: services.OrderGRPCService.getOrder:output_type -> order.GetOrderResponse
+	5, // 5: services.OrderGRPCService.getOrdersByUser:output_type -> order.GetOrdersByUserResponse
 	3, // [3:6] is the sub-list for method output_type
 	0, // [0:3] is the sub-list for method input_type
 	0, // [0:0] is the sub-list for extension type_name

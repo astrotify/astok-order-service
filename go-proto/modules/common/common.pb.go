@@ -4,7 +4,7 @@
 // 	protoc        v6.33.1
 // source: modules/common.proto
 
-package modules_common
+package common
 
 import (
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
@@ -93,7 +93,7 @@ var File_modules_common_proto protoreflect.FileDescriptor
 
 const file_modules_common_proto_rawDesc = "" +
 	"\n" +
-	"\x14modules/common.proto\x12\x0emodules.common\"l\n" +
+	"\x14modules/common.proto\x12\x06common\"l\n" +
 	"\n" +
 	"Pagination\x12\x12\n" +
 	"\x04page\x18\x01 \x01(\x05R\x04page\x12\x14\n" +
@@ -101,7 +101,7 @@ const file_modules_common_proto_rawDesc = "" +
 	"\x05total\x18\x03 \x01(\x05R\x05total\x12\x1e\n" +
 	"\n" +
 	"totalPages\x18\x04 \x01(\x05R\n" +
-	"totalPagesB-Z+order-service/go-proto/proto/modules.commonb\x06proto3"
+	"totalPagesB\x19Z\x17go-proto/modules/commonb\x06proto3"
 
 var (
 	file_modules_common_proto_rawDescOnce sync.Once
@@ -117,7 +117,7 @@ func file_modules_common_proto_rawDescGZIP() []byte {
 
 var file_modules_common_proto_msgTypes = make([]protoimpl.MessageInfo, 1)
 var file_modules_common_proto_goTypes = []any{
-	(*Pagination)(nil), // 0: modules.common.Pagination
+	(*Pagination)(nil), // 0: common.Pagination
 }
 var file_modules_common_proto_depIdxs = []int32{
 	0, // [0:0] is the sub-list for method output_type

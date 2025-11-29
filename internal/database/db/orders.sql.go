@@ -18,9 +18,9 @@ RETURNING id, user_id, status, total_amount, created_at, updated_at
 `
 
 type CreateOrderParams struct {
-	UserID      int32  `json:"user_id"`
-	Status      string `json:"status"`
-	TotalAmount int32  `json:"total_amount"`
+	UserID      int32   `json:"user_id"`
+	Status      string  `json:"status"`
+	TotalAmount float64 `json:"total_amount"`
 }
 
 func (q *Queries) CreateOrder(ctx context.Context, arg CreateOrderParams) (Order, error) {
@@ -44,10 +44,10 @@ RETURNING id, order_id, product_id, quantity, price, created_at, updated_at
 `
 
 type CreateOrderProductParams struct {
-	OrderID   int32 `json:"order_id"`
-	ProductID int32 `json:"product_id"`
-	Quantity  int32 `json:"quantity"`
-	Price     int32 `json:"price"`
+	OrderID   int32   `json:"order_id"`
+	ProductID int32   `json:"product_id"`
+	Quantity  int32   `json:"quantity"`
+	Price     float64 `json:"price"`
 }
 
 func (q *Queries) CreateOrderProduct(ctx context.Context, arg CreateOrderProductParams) (OrderProduct, error) {
@@ -169,10 +169,17 @@ const getOrdersByUserID = `-- name: GetOrdersByUserID :many
 SELECT id, user_id, status, total_amount, created_at, updated_at FROM orders
 WHERE user_id = $1
 ORDER BY created_at DESC
+LIMIT $2 OFFSET $3
 `
 
-func (q *Queries) GetOrdersByUserID(ctx context.Context, userID int32) ([]Order, error) {
-	rows, err := q.db.Query(ctx, getOrdersByUserID, userID)
+type GetOrdersByUserIDParams struct {
+	UserID int32 `json:"user_id"`
+	Limit  int32 `json:"limit"`
+	Offset int32 `json:"offset"`
+}
+
+func (q *Queries) GetOrdersByUserID(ctx context.Context, arg GetOrdersByUserIDParams) ([]Order, error) {
+	rows, err := q.db.Query(ctx, getOrdersByUserID, arg.UserID, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}
@@ -196,6 +203,18 @@ func (q *Queries) GetOrdersByUserID(ctx context.Context, userID int32) ([]Order,
 		return nil, err
 	}
 	return items, nil
+}
+
+const getOrdersByUserIDCount = `-- name: GetOrdersByUserIDCount :one
+SELECT COUNT(*) FROM orders
+WHERE user_id = $1
+`
+
+func (q *Queries) GetOrdersByUserIDCount(ctx context.Context, userID int32) (int64, error) {
+	row := q.db.QueryRow(ctx, getOrdersByUserIDCount, userID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
 }
 
 const updateOrderStatus = `-- name: UpdateOrderStatus :one

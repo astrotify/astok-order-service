@@ -12,7 +12,7 @@ type Order struct {
 	ID          int32            `json:"id"`
 	UserID      int32            `json:"user_id"`
 	Status      string           `json:"status"`
-	TotalAmount int32            `json:"total_amount"`
+	TotalAmount float64          `json:"total_amount"`
 	CreatedAt   pgtype.Timestamp `json:"created_at"`
 	UpdatedAt   pgtype.Timestamp `json:"updated_at"`
 }
@@ -22,7 +22,7 @@ type OrderProduct struct {
 	OrderID   int32            `json:"order_id"`
 	ProductID int32            `json:"product_id"`
 	Quantity  int32            `json:"quantity"`
-	Price     int32            `json:"price"`
+	Price     float64          `json:"price"`
 	CreatedAt pgtype.Timestamp `json:"created_at"`
 	UpdatedAt pgtype.Timestamp `json:"updated_at"`
 }

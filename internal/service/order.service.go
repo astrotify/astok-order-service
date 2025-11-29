@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"math"
 	"order-service/internal/database"
 	"order-service/internal/database/db"
 	"order-service/internal/database/kafka"
@@ -26,11 +27,11 @@ func NewOrderService(db *database.DB, producer *kafka.Producer, topic string) *O
 
 type CreateOrderParams struct {
 	UserID      int32
-	TotalAmount int32
+	TotalAmount float64
 	Products    []struct {
 		ProductID int32
 		Quantity  int32
-		Price     int32
+		Price     float64
 	}
 }
 
@@ -56,10 +57,10 @@ func (s *OrderService) CreateOrder(ctx context.Context, params CreateOrderParams
 	// Create order products
 	products := make([]db.OrderProduct, len(params.Products))
 
-	for _, p := range products {
+	for i, p := range params.Products {
 		product, err := qtx.CreateOrderProduct(ctx, db.CreateOrderProductParams{
-			ProductID: p.ID,
-			OrderID:   p.OrderID,
+			ProductID: p.ProductID,
+			OrderID:   order.ID,
 			Quantity:  p.Quantity,
 			Price:     p.Price,
 		})
@@ -68,7 +69,7 @@ func (s *OrderService) CreateOrder(ctx context.Context, params CreateOrderParams
 			return nil, nil, fmt.Errorf("failed to create order product: %w", err)
 		}
 
-		products = append(products, product)
+		products[i] = product
 	}
 
 	if err := tx.Commit(ctx); err != nil {
@@ -111,12 +112,23 @@ func (s *OrderService) GetOrder(ctx context.Context, orderId int32) (*db.Order, 
 	return &order, products, nil
 }
 
-func (s *OrderService) GetOrdersByUserId(ctx context.Context, userId int32) ([]db.Order, error) {
-	orders, err := s.db.Queries.GetOrdersByUserID(ctx, userId)
+func (s *OrderService) GetOrdersByUserId(ctx context.Context, userId int32, limit int32, page int32) ([]db.Order, int32, int32, error) {
+	orders, err := s.db.Queries.GetOrdersByUserID(ctx, db.GetOrdersByUserIDParams{
+		UserID: userId,
+		Limit:  limit,
+		Offset: (page - 1) * limit,
+	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to get orders: %w", err)
+		return nil, 0, 0, fmt.Errorf("failed to get orders: %w", err)
 	}
-	return orders, nil
+	total, err := s.db.Queries.GetOrdersByUserIDCount(ctx, userId)
+	if err != nil {
+		return nil, 0, 0, fmt.Errorf("failed to get orders count: %w", err)
+	}
+
+	totalPages := int32(math.Ceil(float64(total) / float64(limit)))
+
+	return orders, int32(total), totalPages, nil
 }
 
 func (s *OrderService) UpdateOrderStatus(ctx context.Context, orderId int32, status string) (*db.Order, error) {
