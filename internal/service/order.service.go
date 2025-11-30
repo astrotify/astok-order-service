@@ -149,6 +149,7 @@ func (s *OrderService) mapProductsToItems(products []db.OrderProduct) []map[stri
 		items[i] = map[string]interface{}{
 			"productId": p.ProductID,
 			"quantity":  p.Quantity,
+			"price":     p.Price,
 		}
 	}
 
