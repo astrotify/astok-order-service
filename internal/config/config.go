@@ -47,9 +47,10 @@ func Load() (*Config, error) {
 		config.DBUser = getEnv("DB_USER", "postgres")
 		config.DBPassword = getEnv("DB_PASSWORD", "postgres")
 		config.DBName = getEnv("DB_NAME", "orderdb")
+		sslMode := getEnv("DB_SSL_MODE", "disable") // Use "require" for AWS RDS
 		config.DatabaseURL = fmt.Sprintf(
-			"postgres://%s:%s@%s:%d/%s?sslmode=disable&timezone=UTC",
-			config.DBUser, config.DBPassword, config.DBHost, config.DBPort, config.DBName,
+			"postgres://%s:%s@%s:%d/%s?sslmode=%s&timezone=UTC",
+			config.DBUser, config.DBPassword, config.DBHost, config.DBPort, config.DBName, sslMode,
 		)
 	}
 

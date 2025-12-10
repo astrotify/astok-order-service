@@ -69,3 +69,5 @@ Thumbs.db
 *.temp
 
 go-proto/
+
+task-definition.json

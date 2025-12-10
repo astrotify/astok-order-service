@@ -1,0 +1,359 @@
+name: Deploy Order Service
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "**"
+      - ".github/workflows/deploy.yml"
+  workflow_dispatch:
+    inputs:
+      run_migration:
+        description: "Run database migration"
+        required: false
+        default: false
+        type: boolean
+
+env:
+  AWS_REGION: ap-southeast-1
+  ECR_REPOSITORY: astok-order-service
+  ECS_CLUSTER: astok-cluster
+  ECS_SERVICE: astok-order-service
+  TASK_DEFINITION_FAMILY: astok-order-service
+
+jobs:
+  # ==============================================================================
+  # Job 1: Test
+  # ==============================================================================
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Verify proto submodule
+        run: |
+          if [ ! -f "proto/services/order-service.proto" ]; then
+            echo "Proto submodule not found, cloning..."
+            rm -rf proto
+            git clone https://github.com/astrotify/astok-proto.git proto
+          fi
+          echo "✅ Proto files found"
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.23"
+          cache-dependency-path: go.sum
+
+      - name: Install protoc
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y protobuf-compiler
+          go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.33.0
+          go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.5.1
+
+      - name: Generate proto files
+        run: |
+          mkdir -p go-proto
+          protoc --go_out=. --go_opt=paths=import \
+            --go-grpc_out=. --go-grpc_opt=paths=import \
+            --proto_path=proto \
+            proto/modules/*.proto proto/services/*.proto
+          if [ -d "order-service/go-proto" ]; then
+            mv order-service/go-proto/* go-proto/ 2>/dev/null || true
+            rm -rf order-service
+          fi
+          find go-proto -name "*.pb.go" -type f -exec sed -i 's|"go-proto/|"order-service/go-proto/|g' {} \;
+          echo "✅ Proto files generated"
+
+      - name: Download dependencies
+        run: go mod download
+
+      - name: Run tests
+        run: go test -v ./...
+        continue-on-error: true
+
+      - name: Run linter
+        uses: golangci/golangci-lint-action@v4
+        with:
+          version: latest
+        continue-on-error: true
+
+  # ==============================================================================
+  # Job 2: Build and Push to ECR
+  # ==============================================================================
+  build-and-push:
+    name: Build & Push
+    runs-on: ubuntu-latest
+    needs: test
+    outputs:
+      image_tag: ${{ steps.build.outputs.image_tag }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Verify proto submodule
+        run: |
+          if [ ! -f "proto/services/order-service.proto" ]; then
+            echo "Proto submodule not found, cloning..."
+            rm -rf proto
+            git clone https://github.com/astrotify/astok-proto.git proto
+          fi
+          echo "✅ Proto files:"
+          ls -la proto/services/ || true
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Get commit SHA
+        id: commit
+        run: echo "sha=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+
+      - name: Build and push Docker image
+        id: build
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG: ${{ steps.commit.outputs.sha }}
+        run: |
+          echo "🔨 Building Docker image for linux/amd64..."
+          docker build --platform linux/amd64 -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+          docker tag $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPOSITORY:latest
+
+          echo "📤 Pushing to ECR..."
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
+
+          echo "✅ Images pushed:"
+          echo "   - $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
+          echo "   - $ECR_REGISTRY/$ECR_REPOSITORY:latest"
+
+          echo "image_tag=$IMAGE_TAG" >> $GITHUB_OUTPUT
+
+  # ==============================================================================
+  # Job 3: Run Database Migration (Optional)
+  # ==============================================================================
+  migrate:
+    name: Run Migration
+    runs-on: ubuntu-latest
+    needs: build-and-push
+    if: github.event.inputs.run_migration == true || contains(github.event.head_commit.message, '[migrate]')
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and push migration image
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        run: |
+          # Create migration Dockerfile
+          cat > Dockerfile.migrate << 'EOF'
+          FROM migrate/migrate:latest
+          COPY internal/database/migrations /migrations
+          ENTRYPOINT ["migrate", "-path", "/migrations", "-database"]
+          EOF
+
+          # Build and push
+          docker build --platform linux/amd64 -f Dockerfile.migrate -t $ECR_REGISTRY/astok-order-migrate:latest .
+          docker push $ECR_REGISTRY/astok-order-migrate:latest
+
+          echo "✅ Migration image pushed"
+
+      - name: Get network configuration
+        id: network
+        run: |
+          SERVICE_CONFIG=$(aws ecs describe-services \
+            --cluster $ECS_CLUSTER \
+            --services $ECS_SERVICE \
+            --query 'services[0].networkConfiguration.awsvpcConfiguration')
+
+          SUBNETS=$(echo $SERVICE_CONFIG | jq -r '.subnets | join(",")')
+          SECURITY_GROUPS=$(echo $SERVICE_CONFIG | jq -r '.securityGroups | join(",")')
+
+          echo "subnets=$SUBNETS" >> $GITHUB_OUTPUT
+          echo "security_groups=$SECURITY_GROUPS" >> $GITHUB_OUTPUT
+
+      - name: Run migration task
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          DB_HOST: ${{ secrets.DB_HOST }}
+          DB_USER: ${{ secrets.DB_USER }}
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          DB_NAME: ${{ secrets.DB_NAME }}
+        run: |
+          DB_URL="postgresql://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:5432/${DB_NAME}?sslmode=require"
+
+          # Create task definition
+          cat > migrate-task.json << EOF
+          {
+            "family": "astok-db-migrate",
+            "networkMode": "awsvpc",
+            "requiresCompatibilities": ["FARGATE"],
+            "cpu": "256",
+            "memory": "512",
+            "executionRoleArn": "arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/ecsTaskExecutionRole",
+            "containerDefinitions": [
+              {
+                "name": "migrate",
+                "image": "$ECR_REGISTRY/astok-order-migrate:latest",
+                "essential": true,
+                "command": ["$DB_URL", "-verbose", "up"],
+                "logConfiguration": {
+                  "logDriver": "awslogs",
+                  "options": {
+                    "awslogs-group": "/ecs/astok-migrations",
+                    "awslogs-create-group": "true",
+                    "awslogs-region": "${{ env.AWS_REGION }}",
+                    "awslogs-stream-prefix": "migrate"
+                  }
+                }
+              }
+            ]
+          }
+          EOF
+
+          # Register task definition
+          aws ecs register-task-definition --cli-input-json file://migrate-task.json
+
+          echo "🔄 Running migration..."
+
+          TASK_ARN=$(aws ecs run-task \
+            --cluster $ECS_CLUSTER \
+            --task-definition astok-db-migrate \
+            --launch-type FARGATE \
+            --network-configuration "awsvpcConfiguration={subnets=[${{ steps.network.outputs.subnets }}],securityGroups=[${{ steps.network.outputs.security_groups }}],assignPublicIp=DISABLED}" \
+            --query 'tasks[0].taskArn' \
+            --output text)
+
+          echo "Task ARN: $TASK_ARN"
+
+          # Wait for task to complete
+          echo "⏳ Waiting for migration to complete..."
+          aws ecs wait tasks-stopped --cluster $ECS_CLUSTER --tasks $TASK_ARN
+
+          # Check exit code
+          EXIT_CODE=$(aws ecs describe-tasks \
+            --cluster $ECS_CLUSTER \
+            --tasks $TASK_ARN \
+            --query 'tasks[0].containers[0].exitCode' \
+            --output text)
+
+          echo "Exit code: $EXIT_CODE"
+
+          if [ "$EXIT_CODE" = "0" ]; then
+            echo "✅ Migration completed successfully!"
+          else
+            echo "❌ Migration failed with exit code: $EXIT_CODE"
+            aws logs tail /ecs/astok-migrations --since 10m || true
+            exit 1
+          fi
+
+  # ==============================================================================
+  # Job 4: Deploy to ECS
+  # ==============================================================================
+  deploy:
+    name: Deploy to ECS
+    runs-on: ubuntu-latest
+    needs: [build-and-push, migrate]
+    if: always() && needs.build-and-push.result == 'success'
+
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Update task definition with new image
+        id: task-def
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG: ${{ needs.build-and-push.outputs.image_tag }}
+        run: |
+          # Get current task definition
+          aws ecs describe-task-definition \
+            --task-definition $TASK_DEFINITION_FAMILY \
+            --query 'taskDefinition' > task-def.json
+
+          # Update image in task definition
+          NEW_IMAGE="$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
+          echo "New image: $NEW_IMAGE"
+
+          # Create new task definition JSON (remove fields that can't be included)
+          cat task-def.json | jq --arg IMAGE "$NEW_IMAGE" \
+            'del(.taskDefinitionArn, .revision, .status, .requiresAttributes, .compatibilities, .registeredAt, .registeredBy) |
+             .containerDefinitions[0].image = $IMAGE' > new-task-def.json
+
+          # Register new task definition
+          NEW_REVISION=$(aws ecs register-task-definition \
+            --cli-input-json file://new-task-def.json \
+            --query 'taskDefinition.revision' \
+            --output text)
+
+          echo "✅ New task definition revision: $NEW_REVISION"
+          echo "revision=$NEW_REVISION" >> $GITHUB_OUTPUT
+
+      - name: Deploy to ECS
+        run: |
+          echo "🚀 Deploying to ECS..."
+
+          aws ecs update-service \
+            --cluster $ECS_CLUSTER \
+            --service $ECS_SERVICE \
+            --task-definition $TASK_DEFINITION_FAMILY \
+            --force-new-deployment
+
+          echo "⏳ Waiting for deployment to stabilize..."
+          aws ecs wait services-stable \
+            --cluster $ECS_CLUSTER \
+            --services $ECS_SERVICE
+
+          echo "✅ Deployment completed!"
+
+      - name: Verify deployment
+        run: |
+          echo "📊 Deployment Status:"
+          aws ecs describe-services \
+            --cluster $ECS_CLUSTER \
+            --services $ECS_SERVICE \
+            --query 'services[0].{
+              Status: status,
+              RunningCount: runningCount,
+              DesiredCount: desiredCount,
+              TaskDefinition: taskDefinition
+            }'
