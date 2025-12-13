@@ -4,8 +4,8 @@ import (
 	"log"
 	"order-service/internal/config"
 	"order-service/internal/database"
-	"order-service/internal/database/kafka"
 	"order-service/internal/grpc"
+	"order-service/internal/kafka"
 	"order-service/internal/service"
 )
 

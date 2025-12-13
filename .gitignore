@@ -71,3 +71,6 @@ Thumbs.db
 go-proto/
 
 task-definition.json
+# Air hot reload
+tmp/
+build-errors.log

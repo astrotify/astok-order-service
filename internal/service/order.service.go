@@ -2,12 +2,12 @@ package service
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"math"
 	"order-service/internal/database"
 	"order-service/internal/database/db"
-	"order-service/internal/database/kafka"
+	"order-service/internal/errors"
+	"order-service/internal/kafka"
 	"time"
 )
 
@@ -36,9 +36,18 @@ type CreateOrderParams struct {
 }
 
 func (s *OrderService) CreateOrder(ctx context.Context, params CreateOrderParams) (*db.Order, []db.OrderProduct, error) {
+	// Validate input
+	if params.UserID <= 0 {
+		return nil, nil, errors.NewOrderError(errors.CodeInvalidInput, "user ID is required")
+	}
+	if len(params.Products) == 0 {
+		return nil, nil, errors.NewOrderError(errors.CodeInvalidInput, "at least one product is required")
+	}
+
 	tx, err := s.db.Begin(ctx)
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to begin transaction: %w", err)
+		log.Printf("❌ Failed to begin transaction: %v", err)
+		return nil, nil, errors.Wrap(errors.CodeDatabaseError, err)
 	}
 	defer tx.Rollback(ctx)
 
@@ -51,7 +60,8 @@ func (s *OrderService) CreateOrder(ctx context.Context, params CreateOrderParams
 	})
 
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to create order: %w", err)
+		log.Printf("❌ Failed to create order: %v", err)
+		return nil, nil, errors.NewOrderError(errors.CodeOrderCreateFailed, "failed to create order")
 	}
 
 	// Create order products
@@ -66,14 +76,16 @@ func (s *OrderService) CreateOrder(ctx context.Context, params CreateOrderParams
 		})
 
 		if err != nil {
-			return nil, nil, fmt.Errorf("failed to create order product: %w", err)
+			log.Printf("❌ Failed to create order product: %v", err)
+			return nil, nil, errors.NewOrderError(errors.CodeOrderCreateFailed, "failed to create order product")
 		}
 
 		products[i] = product
 	}
 
 	if err := tx.Commit(ctx); err != nil {
-		return nil, nil, fmt.Errorf("failed to commit transaction: %w", err)
+		log.Printf("❌ Failed to commit transaction: %v", err)
+		return nil, nil, errors.Wrap(errors.CodeDatabaseError, err)
 	}
 
 	log.Printf("✅ Order created: ID=%d, UserID=%d", order.ID, order.UserID)
@@ -89,6 +101,7 @@ func (s *OrderService) CreateOrder(ctx context.Context, params CreateOrderParams
 
 	if err = s.producer.Emit(s.topic, event); err != nil {
 		log.Printf("⚠️ Failed to emit order.created event: %v", err)
+		// Don't fail the order creation if Kafka fails
 	} else {
 		log.Printf("📨 Emitted order.created event to Kafka")
 	}
@@ -97,33 +110,50 @@ func (s *OrderService) CreateOrder(ctx context.Context, params CreateOrderParams
 }
 
 func (s *OrderService) GetOrder(ctx context.Context, orderId int32) (*db.Order, []db.OrderProduct, error) {
-	order, err := s.db.Queries.GetOrderByID(ctx, orderId)
+	if orderId <= 0 {
+		return nil, nil, errors.NewOrderError(errors.CodeInvalidInput, "order ID is required")
+	}
 
+	order, err := s.db.Queries.GetOrderByID(ctx, orderId)
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to get order: %w", err)
+		log.Printf("❌ Failed to get order: %v", err)
+		return nil, nil, errors.ErrOrderNotFound
 	}
 
 	products, err := s.db.Queries.GetOrderProductsByOrderID(ctx, orderId)
-
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to get order products: %w", err)
+		log.Printf("❌ Failed to get order products: %v", err)
+		return nil, nil, errors.Wrap(errors.CodeDatabaseError, err)
 	}
 
 	return &order, products, nil
 }
 
 func (s *OrderService) GetOrdersByUserId(ctx context.Context, userId int32, limit int32, page int32) ([]db.Order, int32, int32, error) {
+	if userId <= 0 {
+		return nil, 0, 0, errors.NewOrderError(errors.CodeInvalidInput, "user ID is required")
+	}
+	if limit <= 0 {
+		limit = 10 // Default limit
+	}
+	if page <= 0 {
+		page = 1 // Default page
+	}
+
 	orders, err := s.db.Queries.GetOrdersByUserID(ctx, db.GetOrdersByUserIDParams{
 		UserID: userId,
 		Limit:  limit,
 		Offset: (page - 1) * limit,
 	})
 	if err != nil {
-		return nil, 0, 0, fmt.Errorf("failed to get orders: %w", err)
+		log.Printf("❌ Failed to get orders: %v", err)
+		return nil, 0, 0, errors.Wrap(errors.CodeDatabaseError, err)
 	}
+
 	total, err := s.db.Queries.GetOrdersByUserIDCount(ctx, userId)
 	if err != nil {
-		return nil, 0, 0, fmt.Errorf("failed to get orders count: %w", err)
+		log.Printf("❌ Failed to get orders count: %v", err)
+		return nil, 0, 0, errors.Wrap(errors.CodeDatabaseError, err)
 	}
 
 	totalPages := int32(math.Ceil(float64(total) / float64(limit)))
@@ -131,15 +161,36 @@ func (s *OrderService) GetOrdersByUserId(ctx context.Context, userId int32, limi
 	return orders, int32(total), totalPages, nil
 }
 
+// Valid order statuses
+var validStatuses = map[string]bool{
+	"PENDING":    true,
+	"CONFIRMED":  true,
+	"PROCESSING": true,
+	"SHIPPED":    true,
+	"DELIVERED":  true,
+	"CANCELLED":  true,
+	"REFUNDED":   true,
+}
+
 func (s *OrderService) UpdateOrderStatus(ctx context.Context, orderId int32, status string) (*db.Order, error) {
+	if orderId <= 0 {
+		return nil, errors.NewOrderError(errors.CodeInvalidInput, "order ID is required")
+	}
+	if !validStatuses[status] {
+		return nil, errors.NewOrderError(errors.CodeInvalidStatus, "invalid order status: "+status)
+	}
+
 	order, err := s.db.Queries.UpdateOrderStatus(ctx, db.UpdateOrderStatusParams{
 		ID:     orderId,
 		Status: status,
 	})
 
 	if err != nil {
-		return nil, fmt.Errorf("failed to update order status: %w", err)
+		log.Printf("❌ Failed to update order status: %v", err)
+		return nil, errors.ErrOrderUpdateFailed
 	}
+
+	log.Printf("✅ Order status updated: ID=%d, Status=%s", orderId, status)
 	return &order, nil
 }
 

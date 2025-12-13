@@ -119,3 +119,20 @@ migratecreate:
 
 run:
 	go run cmd/server/main.go
+
+# Hot reload with Air
+dev:
+	@echo "Starting Order Service with hot reload..."
+	@which air > /dev/null || go install github.com/air-verse/air@latest
+	air -c .air.toml
+
+# Debug with Delve
+debug:
+	@echo "Starting Order Service in debug mode..."
+	@which dlv > /dev/null || go install github.com/go-delve/delve/cmd/dlv@latest
+	dlv debug ./cmd/server/main.go --headless --listen=:2346 --api-version=2 --accept-multiclient
+
+# Build for debug (with debug symbols)
+build-debug:
+	go build -gcflags="all=-N -l" -o bin/order-service-debug cmd/server/main.go
+	@echo "✅ Debug build complete!"
